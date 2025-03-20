@@ -155,7 +155,7 @@ class MycodoRelease:
                     if version_only:
                         return each_tag[1:]
                     else:
-                        return f"https://github.com/kizniche/Mycodo/tarball/{each_tag}"
+                        return f"https://github.com/ofaydn/Mycodo/tarball/{each_tag}"
         except Exception:
             logger.exception("return_latest_version_url()")
 
@@ -176,7 +176,7 @@ class MycodoRelease:
                     if version_only:
                         return each_tag[1:]
                     else:
-                        return f"https://github.com/kizniche/Mycodo/tarball/{each_tag}"
+                        return f"https://github.com/ofaydn/Mycodo/tarball/{each_tag}"
         except Exception:
             logger.exception("return_latest_maj_version_url()")
 
