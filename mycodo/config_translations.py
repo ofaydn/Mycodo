@@ -435,8 +435,11 @@ TRANSLATIONS = {
     'lower_always_min_pwm': {
         'title': "{} ({})".format(lazy_gettext('Always Min'), lazy_gettext('Lower')),
         'phrase': lazy_gettext('Never allow duty cycle to go below Min.')},
+    'manual measurements' : {
+        'title': lazy_gettext('Manual Measurements')},
 
     # '': {
     #     'title': lazy_gettext(''),
     #     'phrase': lazy_gettext('')},
 }
+

@@ -908,3 +908,165 @@ def computer_command(action):
 #         return send_file(path_file, mimetype='image/jpeg')
 #     else:
 #         return "Could not generate image"
+
+import uuid
+from flask import request
+from mycodo.databases.models import ManualMeasurements
+@blueprint.route('/get_manual_measurements/<int:limit>', methods=['GET'])
+@blueprint.route('/get_manual_measurements/', methods=['GET'])
+@flask_login.login_required
+def get_manual_measurements(limit=None):
+    query = ManualMeasurements.query.order_by(ManualMeasurements.id.desc())
+
+    if limit:
+        manual_measurements = query.limit(limit).all()
+    else:
+        manual_measurements = query.all()
+
+    measurements_list = [
+        {
+            "id": m.id,
+            "unique_id": m.unique_id,
+            "date_time": m.date_time.strftime('%Y-%m-%d %H:%M:%S') if m.date_time else None,
+            "name": m.name,
+            "note": m.note,
+            "value": m.value
+        }
+        for m in manual_measurements
+    ]
+
+    return jsonify(measurements_list), 200  # 
+
+from mycodo.mycodo_flask.extensions import db
+
+@blueprint.route('/add_manual_measurement', methods=['POST'])
+@flask_login.login_required
+def add_manual_measurement():
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if not data.get("name") or not data.get("value"):
+            return jsonify({"error": "Missing required fields: name and value"}), 400
+        try:
+            value = float(data["value"])
+        except ValueError:
+            return jsonify({"error": "Invalid value. Must be a number"}), 400
+
+        # Handle date input
+        if data.get("date_time"):
+            try:
+                date_time = datetime.datetime.strptime(data["date_time"], "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD HH:MM:SS"}), 400
+        else:
+            date_time = datetime.datetime.utcnow()  # Default to current datetime
+
+        new_measurement = ManualMeasurements(
+            unique_id=str(uuid.uuid4()),  # Generate a unique ID
+            date_time=date_time,  # Use the given or default date
+            name=data["name"],
+            note=data.get("note", ""),
+            value=value
+        )
+
+        # Add to database
+        db.session.add(new_measurement)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Measurement added successfully"}), 201
+
+    except Exception as e:
+        logging.error(f"Error adding manual measurement: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to add measurement"}), 500
+
+
+@blueprint.route('/export_manual_measurements', methods=['GET'])
+@flask_login.login_required
+def export_manual_measurements():
+    """Export filtered manual measurements in timestamp-based CSV format."""
+    try:
+        start_timestamp = request.args.get("start", type=float)
+        end_timestamp = request.args.get("end", type=float)
+        selected_sensors = request.args.get("sensors")
+
+        if not start_timestamp or not end_timestamp:
+            return jsonify({"error": "Start and end timestamps are required!"}), 400
+
+        # Convert timestamps to datetime
+        start_datetime = datetime.datetime.utcfromtimestamp(start_timestamp)
+        end_datetime = datetime.datetime.utcfromtimestamp(end_timestamp)
+
+        # Query base
+        query = ManualMeasurements.query.filter(
+            ManualMeasurements.date_time >= start_datetime,
+            ManualMeasurements.date_time <= end_datetime
+        )
+
+        # Filter by selected sensors (if any)
+        if selected_sensors:
+            sensor_list = selected_sensors.split(",")
+            query = query.filter(ManualMeasurements.name.in_(sensor_list))
+
+        # Execute query
+        measurements = query.order_by(ManualMeasurements.date_time.asc()).all()
+
+        # Create CSV data
+        csv_data = [["timestamp (UTC)"]]  # Headers only
+
+        if measurements:
+            data_dict = {}
+            sensor_names = set()
+
+            for m in measurements:
+                timestamp = m.date_time.timestamp()
+                sensor_names.add(m.name)
+
+                if timestamp not in data_dict:
+                    data_dict[timestamp] = {}
+
+                data_dict[timestamp][m.name] = m.value
+
+            sensor_names = sorted(sensor_names)
+            csv_data[0].extend(sensor_names)  # Add sensor headers
+
+            for timestamp in sorted(data_dict.keys()):
+                row = [timestamp] + [data_dict[timestamp].get(sensor, "") for sensor in sensor_names]
+                csv_data.append(row)
+
+        # Convert to CSV format
+        csv_string_io = StringIO()
+        csv_writer = csv.writer(csv_string_io)
+        csv_writer.writerows(csv_data)
+
+        # Return CSV as file download
+        response = Response(
+            csv_string_io.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=manual_measurements.csv"}
+        )
+
+        return response
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/get_manual_measurement_sensor_names', methods=['GET'])
+@flask_login.login_required
+def get_sensor_names():
+    try:
+        sensor_names = (
+            db.session.query(ManualMeasurements.name)
+            .distinct()
+            .all()
+        )
+
+        sensor_list = [name[0] for name in sensor_names if name[0]]
+        return jsonify(sensor_list)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+

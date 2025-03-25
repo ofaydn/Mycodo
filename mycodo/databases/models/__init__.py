@@ -61,7 +61,7 @@ from .remote import Remote
 from .role import Role
 from .smtp import SMTP
 from .user import User
-
+from .manual_measurements import ManualMeasurements
 
 def alembic_upgrade_db():
     """Upgrade sqlite3 database with alembic."""

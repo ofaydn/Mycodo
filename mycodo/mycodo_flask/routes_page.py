@@ -1294,3 +1294,90 @@ def gen(camera):
         frame = camera.get_frame()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+from mycodo.databases.models import ManualMeasurements
+from mycodo.mycodo_flask.forms import forms_manual_measurements
+from mycodo.mycodo_flask.utils import utils_manual_measurements
+@blueprint.route('/manual-measurements', methods=('GET', 'POST'))
+@flask_login.login_required
+def page_manual_measurements():
+    """
+    Add manual measurements page
+    """
+    form_note_add = forms_manual_measurements.NoteAdd()
+    form_note_options = forms_manual_measurements.NoteOptions()
+    form_note_mod = forms_manual_measurements.NoteMod()
+
+    total_notes = ManualMeasurements.query.count()
+
+    notes = ManualMeasurements.query.order_by(ManualMeasurements.id.desc()).limit(10)
+
+    current_date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if request.method == 'POST':
+        if not utils_general.user_has_permission('edit_settings'):
+            return redirect(url_for('routes_page.page_manual_measurements'))
+        
+        if form_note_add.note_add.data:
+            utils_manual_measurements.note_add(form_note_add)
+        elif form_note_mod.note_save.data:
+            utils_manual_measurements.note_mod(form_note_mod)
+        elif form_note_options.note_del.data:
+            utils_manual_measurements.note_del(form_note_options)
+        elif form_note_options.note_mod.data:
+            return redirect(url_for('routes_page.page_manual_measurements_edit', unique_id=form_note_options.note_unique_id.data))
+
+        return redirect(url_for('routes_page.page_manual_measurements'))
+    if notes:
+        note_count = notes.count()
+        notes_all = notes.all()
+    else:
+        note_count = 0
+        notes_all = None
+    number_displayed_notes = (note_count, total_notes)
+
+    return render_template('tools/manual_measurements.html',
+                           form_note_add=form_note_add,
+                           form_note_options=form_note_options,
+                           form_note_mod=form_note_mod,
+                           notes=notes_all,
+                           current_date_time=current_date_time,
+                           number_displayed_notes=number_displayed_notes)
+
+@blueprint.route('/manual_measurements_edit/<unique_id>', methods=('GET', 'POST'))
+@flask_login.login_required
+def page_manual_measurements_edit(unique_id):
+    """
+    Edit manual measurements page
+    """
+    # Used in software tests to verify function is executing as admin
+    if unique_id == '0':
+        return 'admin logged in'
+
+    this_note = ManualMeasurements.query.filter(ManualMeasurements.unique_id == unique_id).first()
+
+    form_note_mod = forms_manual_measurements.NoteMod()
+
+
+    if request.method == 'POST':
+        if not utils_general.user_has_permission('edit_settings'):
+            return redirect(url_for('routes_page.page_manual_measurements'))
+
+        if form_note_mod.note_save.data:
+            utils_manual_measurements.note_mod(form_note_mod)
+            return redirect(url_for('routes_page.page_manual_measurements'))#updated, to redirect user to manual measurements page
+                                                                            #when saved a manual measurement
+        if form_note_mod.note_del.data:
+            utils_manual_measurements.note_del(form_note_mod)
+            return redirect(url_for('routes_page.page_manual_measurements'))
+        if form_note_mod.note_cancel.data:
+            return redirect(url_for('routes_page.page_manual_measurements'))
+
+        return redirect(url_for('routes_page.page_manual_measurements_edit', unique_id=this_note.unique_id))
+
+    form_note_mod.note.data = this_note.note
+
+    return render_template('tools/manual_measurements_edit.html',
+                           form_note_mod=form_note_mod,
+                           this_note=this_note,)
+
