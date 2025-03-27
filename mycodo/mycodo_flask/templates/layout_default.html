@@ -182,8 +182,14 @@
 
     <nav id="nav-respond" class="navbar navbar-expand-md{% if current_user.theme in dark_themes %} navbar-dark bg-dark{% else %} navbar-light bg-light{% endif %}">
 
-      
-      <a class="navbar-brand" id="daemon-status" data-toggle="tooltip" data-placement="bottom" href="/index_page" style="text-align: center; padding: 0 15px; font-size: 0.8em; font-weight: bold;/*noinspection CssOverwrittenProperties*/color: #4E9258; margin-top:0.2rem;" title="" data-original-title="Daemon is Running"><img fetchpriority="high" decoding="async" width="70" height="43" src="https://i.ibb.co/WWDt9LCF/logo.png" alt="Company Logo"><div style="color:#3c78d8; display:inline; font-size:1.1rem">AQPI</div></a><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand" id="daemon-status" data-toggle="tooltip" data-placement="bottom" href="/index_page" style="padding: 0px 15px; font-size: 0.8em; font-weight: bold; color: rgb(78, 146, 88);" title="" data-original-title="Daemon is Running">
+   
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+               <img fetchpriority="high" decoding="async" width="70" height="43" src="https://i.ibb.co/WWDt9LCF/logo.png" alt="Company Logo">
+               <div style="color: #3c78d8; font-size: 1.1rem;">AQPI</div>
+            </div>
+         </a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
         <i class="fas fa-bars"></i>
       </button>
       <div class="collapse navbar-collapse" id="navbarCollapse">
